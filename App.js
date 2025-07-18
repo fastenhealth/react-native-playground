@@ -80,7 +80,7 @@ export default function App() {
         `
         if(currentWebviewEntity === CommunicationEntityModalWebView){
             navigationStateChangeScript += `
-                document.body.style.backgroundColor = 'green'; //just for testing
+                document.body.style.backgroundColor = 'yellow'; //just for testing
 
             
                 //override the window.opener.postMessage function to send messages to the React Native app
@@ -215,7 +215,8 @@ export default function App() {
               ref={primaryWebViewRef}
               source={{
                   // uri: `https://www.acmelabsdemo.com/v3`
-                  uri: `https://www.acmelabsdemo.com/testing/popup`
+                  // uri: `https://www.acmelabsdemo.com/testing/popup`
+                  uri: `https://embed.connect.fastenhealth.com/?public-id=public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu&external-id=1235-123412-123123$^%23*@(!&search-only=true`
               }}
               javaScriptEnabled={true}
               domStorageEnabled={true}
@@ -280,7 +281,9 @@ export default function App() {
                                 // Log the URL to see the navigation state
                                 console.debug('Modal WebView Navigation State:', navState);
 
-                                if(navState.loading === false && navState.url.includes('/destination.html')) {
+                                //destination.html is used by the ACME Labs demo app to send the connection_id back to the parent window -- this can be removed in production code
+                                //bridge/callback is used by Fasten Connect API in production to send the connection_id back to the parent window
+                                if(navState.loading === false && navState.url.includes('/destination.html') || navState.url.includes('/bridge/callback')) {
                                     modalWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntityModalWebView));
                                 }
                             }
