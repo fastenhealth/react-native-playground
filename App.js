@@ -22,6 +22,7 @@ export default function App() {
     * - `window.close` does not work in React Native WebViews, as it is also designed for web browsers.
     * - messaging between the popup and the parent window is done via Javascript postMessage API, which depends on browser behavior to set the trusted event.source and window.parent associations
     *
+    *
     * Instead, our React Native solution involves two WebViews and 4 "entities" that need to communicate with each other:
     * 1. The Primary WebView - this is the main WebView that loads the webpage where the Fasten Connect widget is embedded.
     * 2. The Modal WebView - this is the WebView that opens when the Fasten Connect widget tries to open a popup.
@@ -36,65 +37,140 @@ export default function App() {
     * */
 
     //List of entities that need to communicate with each other
-    enum CommunicationEntity {
-        PrimaryWebView = 'PrimaryWebView',
-        ModalWebView = 'ModalWebView',
-        ReactNativeApp = 'ReactNativeApp'
-    }
+    // TODO: enums don't seem to work? Could be an issue with our development env, but we will use string constants instead.
+    // enum CommunicationEntity {
+    const CommunicationEntityPrimaryWebView = 'PrimaryWebView'
+    const CommunicationEntityModalWebView = 'ModalWebView'
+    const CommunicationEntityReactNativeComponent = 'ReactNativeComponent' //this is the Fasten Connect React Native component that contains the two WebViews (this file)
+    const CommunicationEntityExternal = 'External' // this is data that will be sent to the customer's app, for them to handle.
+    // }
 
-    enum CommunicationAction {
-        WEBVIEW_CLOSE_REQUEST = 'WEBVIEW_CLOSE_REQUEST', // request to close the Webview. eg. Parent window requests the Modal Webview be closed, or a JS window.close function is called.
-    }
+    const CommunicationActionWebviewCloseRequest = 'WEBVIEW_CLOSE_REQUEST' // request to close the Webview. eg. Parent window requests the Modal Webview be closed, or a JS window.close function is called.
 
+    //example communication message structure, this is the format we will use to send messages between the entities
     interface CommunicationMessage {
-        from: CommunicationEntity; // The entity sending the message
-        to: CommunicationEntity; // The entity receiving the message
+        from: string; // The entity sending the message
+        to: string; // The entity receiving the message
 
         // one of action or payload must be defined
-        action?: CommunicationAction; // The action being performed
-        payload?: string; // Optional data being sent with the message
+        action?: string; // The action being performed
+        payload?: string; // The data being sent with the message, this will be a stringified JSON object
     }
 
     //Since the standard postMessage API is not available in React Native WebViews,
     // we will override the window.close and window.opener.postMessage functions to send messages to the React Native app.
-    const commonOnNavigationStateChangeScript = (currentWebviewEntity: CommunicationEntity) => {
-        return `
-        document.body.style.backgroundColor = 'lightblue'; //just for testing
-        //override the window.close function to send a message to the React Native app, to close the Modal Webview
-        const originalClose = window.close;
-        window.close = function() {
-            console.debug("custom close function called");
-            if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                    "from": "${currentWebviewEntity}",
-                    "to": "${CommunicationEntity.ReactNativeApp}",
-                    "action": "${CommunicationAction.WEBVIEW_CLOSE_REQUEST}",
-                }));
+    const commonOnNavigationStateChangeScript = (currentWebviewEntity: string) => {
+        let navigationStateChangeScript = `
+            document.body.style.backgroundColor = 'lightblue'; //just for testing
+            //override the window.close function to send a message to the React Native app, to close the Modal Webview
+            const originalClose = window.close;
+            window.close = function() {
+                console.debug("custom close function called");
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        "from": "${currentWebviewEntity}",
+                        "to": "${CommunicationEntityReactNativeComponent}",
+                        "action": "${CommunicationActionWebviewCloseRequest}",
+                    }));
+                }
+                // originalClose(); // Optional: if you want the original behavior too
+            };
+        `
+        if(currentWebviewEntity === CommunicationEntityModalWebView){
+            navigationStateChangeScript += `
+                //override the window.opener.postMessage function to send messages to the React Native app
+                //logically, this can only be a message from the child popup to the parent window
+                window.opener = {
+                    postMessage: function(payload, targetOrigin){
+                        //TODO: validate targetOrigin
+                        console.error('custom postMessage function called with payload:', payload);
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                            "from": "${currentWebviewEntity}",
+                            "to": "${CommunicationEntityPrimaryWebView}",
+                            "payload": payload
+                        }))
+                    }
+                }
+            `
+        }
+        navigationStateChangeScript += `
+            true; // Important: Return true to ensure the script executes
+        `;
+        return navigationStateChangeScript;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Messaging Bus to facilitate communication between the two WebViews and the React Native app
+    // - as discussed above, Reach Native uses `onMessage` and `postMessage` to communicate between the WebViews and the React Native app.
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    const findWebviewRefByEntityName = (entityName: string): any => {
+        switch (entityName) {
+            case CommunicationEntityPrimaryWebView:
+                return primaryWebViewRef?.current;
+            case CommunicationEntityModalWebView:
+                return modalWebViewRef?.current;
+            case CommunicationEntityReactNativeComponent:
+                console.warn('Cannot find WebView reference for React Native Component');
+                return null; // React Native Component does not have a WebView reference
+            default:
+                console.error(`Unknown entity name: ${entityName}`);
+                return null;
+        }
+    }
+
+    const messageBusOnMessage = (currentWebviewEntity: string, {nativeEvent}) => {
+        console.debug(`[${currentWebviewEntity}] onMessage`, nativeEvent)
+
+        const data = nativeEvent.data;
+        if(!data){
+            console.warn(`[${currentWebviewEntity}] no "data" received: ${nativeEvent}`);
+            return;
+        }
+
+        const communicationMessage: CommunicationMessage = JSON.parse(data); //should be a CommunicationMessage
+        console.debug(`[${currentWebviewEntity}] parsed JSON data`, communicationMessage);
+
+        if (communicationMessage.action === 'WEBVIEW_CLOSE_REQUEST') {
+            //this message was sent from the webview to request the React Native app to close the current WebView
+            //This should only happen to the Modal WebView, so lets throw an error and bail if the currentWebviewEntity is not the Modal WebView
+            if( currentWebviewEntity !== CommunicationEntityModalWebView) {
+                console.error(`[${currentWebviewEntity}] received WEBVIEW_CLOSE_REQUEST, but this should only be sent from the Modal WebView`);
+                return;
             }
-            // originalClose(); // Optional: if you want the original behavior too
-        };
-        
-        //override the window.opener.postMessage function to send messages to the React Native app
-        window.opener = {
-            postMessage: function(payload, targetOrigin){
-                //TODO: validate targetOrigin
-                console.error('custom postMessage function called with payload:', payload);
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                    "from": "${currentWebviewEntity}",
-                    "to": "${CommunicationEntity.ReactNativeApp}",
-                    "payload": payload
-                }))
+            if(communicationMessage.to !== CommunicationEntityReactNativeComponent) {
+                console.error(`[${currentWebviewEntity}] received WEBVIEW_CLOSE_REQUEST, but the message is not intended for the React Native Component`);
+                return;
+            }
+
+            // Perform actions to close the WebView, e.g., unmount the component on window.close request
+            setShowNewWebView(false)
+            return
+        }
+
+        //check if the message is intended for a different WebView
+        if (communicationMessage.to !== currentWebviewEntity) {
+            console.debug(`[${currentWebviewEntity}] message is not for this WebView, forwarding to ${communicationMessage.to}`);
+            //find the WebView reference for the target entity
+            const targetWebViewRef = findWebviewRefByEntityName(communicationMessage.to);
+            if (targetWebViewRef) {
+                //post the message to the target WebView
+                console.debug(`[${currentWebviewEntity}] posting message to ${communicationMessage.to}`, communicationMessage);
+                targetWebViewRef.postMessage(JSON.stringify(communicationMessage));
+            } else {
+                console.error(`[${currentWebviewEntity}] could not find WebView reference for ${communicationMessage.to}`);
             }
         }
-        
-        true; // Important: Return true to ensure the script executes
-    `}
+    }
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //Primary WebView Handlers
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     const primaryWebViewRef = useRef(null);
+    const modalWebViewRef = useRef(null);
+
     const primaryOnOpenWindow = ({ nativeEvent }) => {
         const { targetUrl } = nativeEvent
         console.log('Intercepted OpenWindow for', targetUrl)
@@ -102,61 +178,6 @@ export default function App() {
         setNewWebViewUrl(nativeEvent.targetUrl);
         setShowNewWebView(true);
     };
-
-    const primaryOnMessage = ({ nativeEvent }) => {
-        console.error('Intercepted PrimaryWindow for', nativeEvent)
-
-        const data = nativeEvent.data;
-        if(!data){
-            console.warn('No data received in primaryOnMessage');
-            return;
-        }
-
-        const eventData = JSON.parse(data);
-
-        //this is a message sent from Modal WebView (via the Fasten Connect API Callback)
-        console.debug('Received message from modal facilitated by WebView:', eventData);
-        if (modalWebViewRef.current) {
-            //acknowledge the message by sending back a close request to the modal WebView
-            // modalWebViewRef.current.postMessage(JSON.stringify({"action": "WEBVIEW_CLOSE_REQUEST"}));
-            setShowNewWebView(false)
-        } else {
-            console.error('Modal WebView reference is not available');
-        }
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //Modal WebView Handlers
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    const modalWebViewRef = useRef(null);
-
-    //messages will either be sent from the overridden window.close function, or from the overridden window.opener.postMessage function
-    const modalOnMessage = ({ nativeEvent }) => {
-        console.debug('Intercepted ModalWindow for', nativeEvent)
-
-        const data = nativeEvent.data;
-        if(!data){
-            console.warn('No data received in modalOnMessage');
-            return;
-        }
-
-        const eventData = JSON.parse(data);
-
-        if (eventData.action === 'WEBVIEW_CLOSE_REQUEST') {
-            // Perform actions to close the WebView, e.g., unmount the component on window.close request
-            setShowNewWebView(false)
-        } else {
-            //this is a message sent from the Fasten Connect API Callback endpoint that needs to bubble up to the parentWebView
-            console.debug('Received message from modal WebView:', eventData);
-            if (primaryWebViewRef.current) {
-                console.log("Sending message to primary WebView:", eventData);
-                primaryWebViewRef.current.postMessage(JSON.stringify(eventData));
-            } else {
-                console.error('Primary WebView reference is not available');
-            }
-        }
-    }
-
 
   return (
 
@@ -177,7 +198,11 @@ export default function App() {
               originWhitelist={['*']}
               // This will intercept the window.open event and open a new modal WebView instead
               onOpenWindow={primaryOnOpenWindow}
-              onMessage={primaryOnMessage}
+              onMessage={
+                  (syntheticEvent) => {
+                    messageBusOnMessage(CommunicationEntityPrimaryWebView, syntheticEvent);
+                  }
+              }
               onError={
                     (syntheticEvent) => {
                         const { nativeEvent } = syntheticEvent;
@@ -195,7 +220,7 @@ export default function App() {
                       console.debug('Primary WebView Navigation State:', navState);
 
                       if(navState.loading === false) {
-                          primaryWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntity.PrimaryWebView));
+                          primaryWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntityPrimaryWebView));
                       }
                   }
               }
@@ -214,7 +239,11 @@ export default function App() {
                       ref={modalWebViewRef}
                       source={{ uri: newWebViewUrl }}
                       javaScriptEnabled={true}
-                      onMessage={modalOnMessage}
+                      onMessage={
+                          (syntheticEvent) => {
+                              messageBusOnMessage(CommunicationEntityModalWebView, syntheticEvent);
+                          }
+                      }
 
 
                       //you cant use `injectedJavaScript` because Modal webview will be redirected multiple times:
@@ -227,7 +256,7 @@ export default function App() {
                                 console.debug('Modal WebView Navigation State:', navState);
 
                                 if(navState.loading === false && navState.url.includes('/destination.html')) {
-                                    modalWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntity.ModalWebView));
+                                    modalWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntityModalWebView));
                                 }
                             }
                       }
