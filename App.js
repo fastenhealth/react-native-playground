@@ -38,16 +38,15 @@ export default function App() {
 
     //List of entities that need to communicate with each other
     // TODO: enums don't seem to work? Could be an issue with our development env, but we will use string constants instead.
-    // enum CommunicationEntity {
-    const CommunicationEntityPrimaryWebView = 'PrimaryWebView'
-    const CommunicationEntityModalWebView = 'ModalWebView'
-    const CommunicationEntityReactNativeComponent = 'ReactNativeComponent' //this is the Fasten Connect React Native component that contains the two WebViews (this file)
-    const CommunicationEntityExternal = 'External' // this is data that will be sent to the customer's app, for them to handle.
-    // }
+    // TODO: these constants are hardcoded on the Fasten Connect API side as well, which is not ideal.
+    const CommunicationEntityPrimaryWebView = 'FASTEN_CONNECT_PRIMARY_WEBVIEW'
+    const CommunicationEntityModalWebView = 'FASTEN_CONNECT_MODAL_WEBVIEW'
+    const CommunicationEntityReactNativeComponent = 'FASTEN_CONNECT_REACT_WEBVIEW' //this is the Fasten Connect React Native component that contains the two WebViews (this file)
+    const CommunicationEntityExternal = 'FASTEN_CONNECT_EXTERNAL' // this is data that will be sent to the customer's app, for them to handle.
 
     // request to close the modal Webview.
     // eg. Parent window requests the Modal Webview be closed, or a JS window.close function is called.
-    const CommunicationActionModalWebviewCloseRequest = 'MODAL_WEBVIEW_CLOSE_REQUEST'
+    const CommunicationActionModalWebviewCloseRequest = 'FASTEN_CONNECT_MODAL_WEBVIEW_CLOSE_REQUEST'
 
     //example communication message structure, this is the format we will use to send messages between the entities
     interface CommunicationMessage {
@@ -80,23 +79,23 @@ export default function App() {
         `
         if(currentWebviewEntity === CommunicationEntityModalWebView){
             navigationStateChangeScript += `
-                document.body.style.backgroundColor = 'yellow'; //just for testing
-
-            
-                //override the window.opener.postMessage function to send messages to the React Native app
-                //logically, this can only be a message from the child popup to the parent window
-                window.opener = {
-                    postMessage: function(payload, targetOrigin){
-                        //TODO: validate targetOrigin
-                        console.error('custom postMessage function called with payload:', payload);
-                        window.ReactNativeWebView.postMessage(JSON.stringify({
-                            "from": "${currentWebviewEntity}",
-                            "to": "${CommunicationEntityPrimaryWebView}",
-                            "payload": payload
-                        }))
-                    }
-                }
-
+                document.body.style.backgroundColor = 'blue'; //just for testing
+        //
+        //
+        //         //override the window.opener.postMessage function to send messages to the React Native app
+        //         //logically, this can only be a message from the child popup to the parent window
+        //         window.opener = {
+        //             postMessage: function(payload, targetOrigin){
+        //                 //TODO: validate targetOrigin
+        //                 console.error('custom postMessage function called with payload:', payload);
+        //                 window.ReactNativeWebView.postMessage(JSON.stringify({
+        //                     "from": "${currentWebviewEntity}",
+        //                     "to": "${CommunicationEntityPrimaryWebView}",
+        //                     "payload": payload
+        //                 }))
+        //             }
+        //         }
+        
             `
         }
         navigationStateChangeScript += `
@@ -198,11 +197,13 @@ export default function App() {
 
     const primaryOnOpenWindow = ({ nativeEvent }) => {
         const { targetUrl } = nativeEvent
-        console.log('Intercepted OpenWindow for', targetUrl)
+        console.debug(`[${CommunicationEntityPrimaryWebView}] Intercepted window.open() for`, targetUrl)
 
         setNewWebViewUrl(nativeEvent.targetUrl);
         setShowNewWebView(true);
     };
+
+    const injectedModalScript: {[key: string]: boolean} = {}
 
   return (
 
@@ -216,9 +217,11 @@ export default function App() {
               source={{
                   // uri: `https://www.acmelabsdemo.com/v3`
                   // uri: `https://www.acmelabsdemo.com/testing/popup`
-                  uri: `https://embed.connect.fastenhealth.com/?public-id=public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu&external-id=1235-123412-123123$^%23*@(!&search-only=true`
+                  // uri: `https://embed.connect.fastenhealth.com/?public-id=public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu&search-only=true`
+                  uri: `https://embed.connect-dev.fastenhealth.com/?public-id=public_test_rei2un7aagh5pquwikxh2dsyq23bsdyu4l8vm9eq29ftu&search-only=true`
               }}
               javaScriptEnabled={true}
+              webviewDebuggingEnabled={true} //TODO: not required in production
               domStorageEnabled={true}
               mixedContentMode={'always'}
               originWhitelist={['*']}
@@ -232,7 +235,7 @@ export default function App() {
               onError={
                     (syntheticEvent) => {
                         const { nativeEvent } = syntheticEvent;
-                        console.error('WebView error: ', nativeEvent);
+                        console.error(`[${CommunicationEntityPrimaryWebView}] WebView error: `, nativeEvent);
                     }
               }
 
@@ -243,7 +246,7 @@ export default function App() {
               onNavigationStateChange={
                   (navState) => {
                       // Log the URL to see the navigation state
-                      console.debug('Primary WebView Navigation State:', navState);
+                      // console.debug('Primary WebView Navigation State:', navState);
 
                       if(navState.loading === false) {
                           primaryWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntityPrimaryWebView));
@@ -265,6 +268,7 @@ export default function App() {
                       ref={modalWebViewRef}
                       source={{ uri: newWebViewUrl }}
                       javaScriptEnabled={true}
+                      webviewDebuggingEnabled={true} //TODO: not required in production
                       onMessage={
                           (syntheticEvent) => {
                               messageBusOnMessage(CommunicationEntityModalWebView, syntheticEvent);
@@ -276,18 +280,45 @@ export default function App() {
                       // first to the Fasten Connect API endpoint
                       // then to the Patient Portal (where the patient must login and consent)
                       // finally back to the Fasten Connect API Callback endpoint where data will be shared using the postMessage API
+                      //
+                      // we also need to make sure that we inject the script as early as possible, since we need to overwrite the window.opener.postMessage() function,
+                      // which is the only thing that is called in a popup window.
+
+                      // OPTION 1
+                      // injectedJavaScriptBeforeContentLoaded={ commonOnNavigationStateChangeScript(CommunicationEntityModalWebView) }
+
+
+                        // OPTION 2
                       onNavigationStateChange={
                             (navState) => {
                                 // Log the URL to see the navigation state
-                                console.debug('Modal WebView Navigation State:', navState);
+                                // console.debug('Modal WebView Navigation State:', navState);
 
                                 //destination.html is used by the ACME Labs demo app to send the connection_id back to the parent window -- this can be removed in production code
                                 //bridge/callback is used by Fasten Connect API in production to send the connection_id back to the parent window
-                                if(navState.loading === false && navState.url.includes('/destination.html') || navState.url.includes('/bridge/callback')) {
+                                if(navState.loading === false && (navState.url.includes('/destination.html') || navState.url.includes('/bridge/callback'))) {
                                     modalWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntityModalWebView));
                                 }
                             }
                       }
+
+                      //OPTION 3
+                      // onLoadStart={e => {
+                      //     // injectedModalScript[e.nativeEvent.url] = false
+                      //     console.log(`[${CommunicationEntityModalWebView}] load start: ${e.nativeEvent.url}`);
+                      // }}
+                      //
+                      // onLoadProgress={e => {
+                      //     console.log(`[${CommunicationEntityModalWebView}] progress:`, e.nativeEvent.progress, `url: ${e.nativeEvent.url}`);
+                      //     // if ((e.nativeEvent.url.includes('/destination.html') || e.nativeEvent.url.includes('/bridge/callback')) && !injectedModalScript[e.nativeEvent.url]) {
+                      //     if (e.nativeEvent.url.includes('/destination.html') || e.nativeEvent.url.includes('/bridge/callback')) {
+                      //           // script has not been previously injected to this page, and the page is the destination.html or bridge/callback page
+                      //         modalWebViewRef.current.injectJavaScript(commonOnNavigationStateChangeScript(CommunicationEntityModalWebView));
+                      //         // injectedModalScript[e.nativeEvent.url] = true
+                      //         console.log(`[${CommunicationEntityModalWebView}] injected`);
+                      //     }
+                      // }}
+
                   />
                   <Button title="Close" onPress={() => setShowNewWebView(false)} />
               </View>
