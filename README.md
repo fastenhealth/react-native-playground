@@ -1,6 +1,4 @@
-Here is a `README.md` file for your project:
 
-```markdown
 # Fasten Connect React Native SDK (Beta)
 
 This project provides a React Native SDK for integrating Fasten Connect into your application. **Please note that this SDK is currently in beta and may not reflect the final version of the Fasten Connect React Native SDK.**
