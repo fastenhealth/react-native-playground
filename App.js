@@ -7,6 +7,11 @@ export default function App() {
     const [showNewWebView, setShowNewWebView] = useState(false);
     const [newWebViewUrl, setNewWebViewUrl] = useState('');
 
+
+    //TODO: replace with your public ID
+    // const CUSTOMER_PUBLIC_ID = "public_test_rei2un7aagh5pquwikxh2dsyq23bsdyu4l8vm9eq29ftu";
+    const CUSTOMER_PUBLIC_ID = "public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu";
+
     /* *
     * This component is intended to replace the Fasten Connect Stitch.js widget in a React Native app.
     *
@@ -38,7 +43,7 @@ export default function App() {
 
     //List of entities that need to communicate with each other
     // TODO: enums don't seem to work? Could be an issue with our development env, but we will use string constants instead.
-    // TODO: these constants are hardcoded on the Fasten Connect API side as well, which is not ideal.
+    // TODO: these constants are hardcoded on the Fasten Connect API side as well, which is not ideal. Will require lock-step deployments
     const CommunicationEntityPrimaryWebView = 'FASTEN_CONNECT_PRIMARY_WEBVIEW'
     const CommunicationEntityModalWebView = 'FASTEN_CONNECT_MODAL_WEBVIEW'
     const CommunicationEntityReactNativeComponent = 'FASTEN_CONNECT_REACT_WEBVIEW' //this is the Fasten Connect React Native component that contains the two WebViews (this file)
@@ -61,8 +66,8 @@ export default function App() {
     //Since the standard postMessage API is not available in React Native WebViews,
     // we will override the window.close and window.opener.postMessage functions to send messages to the React Native app.
     const commonOnNavigationStateChangeScript = (currentWebviewEntity: string) => {
-        let navigationStateChangeScript = `
-            document.body.style.backgroundColor = 'lightblue'; //just for testing
+        return `
+            // document.body.style.backgroundColor = 'lightblue'; //just for testing
             //override the window.close function to send a message to the React Native app, to close the Modal Webview
             const originalClose = window.close;
             window.close = function() {
@@ -76,32 +81,9 @@ export default function App() {
                 }
                 // originalClose(); // Optional: if you want the original behavior too
             }; 
-        `
-        if(currentWebviewEntity === CommunicationEntityModalWebView){
-            navigationStateChangeScript += `
-                document.body.style.backgroundColor = 'blue'; //just for testing
-        //
-        //
-        //         //override the window.opener.postMessage function to send messages to the React Native app
-        //         //logically, this can only be a message from the child popup to the parent window
-        //         window.opener = {
-        //             postMessage: function(payload, targetOrigin){
-        //                 //TODO: validate targetOrigin
-        //                 console.error('custom postMessage function called with payload:', payload);
-        //                 window.ReactNativeWebView.postMessage(JSON.stringify({
-        //                     "from": "${currentWebviewEntity}",
-        //                     "to": "${CommunicationEntityPrimaryWebView}",
-        //                     "payload": payload
-        //                 }))
-        //             }
-        //         }
-        
-            `
-        }
-        navigationStateChangeScript += `
+
             true; // Important: Return true to ensure the script executes
         `;
-        return navigationStateChangeScript;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,7 +136,7 @@ export default function App() {
         //check if the event is intended for our customer to handle
         if(communicationMessage.to === CommunicationEntityExternal) {
             //TODO: add bubble up code outside this component.
-            console.log(`[${CommunicationEntityExternal}] received message for external entity, this will be bubbled up to customer for use outside this component`, communicationMessage);
+            console.warn(`[${CommunicationEntityExternal}] received message for external entity, this will be bubbled up to customer for use outside this component`, communicationMessage);
             return
         }
 
@@ -221,8 +203,8 @@ export default function App() {
               source={{
                   // uri: `https://www.acmelabsdemo.com/v3`
                   // uri: `https://www.acmelabsdemo.com/testing/popup`
-                  // uri: `https://embed.connect.fastenhealth.com/?public-id=public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu&search-only=true`
-                  uri: `https://embed.connect-dev.fastenhealth.com/?public-id=public_test_rei2un7aagh5pquwikxh2dsyq23bsdyu4l8vm9eq29ftu&search-only=true&sdk-mode=react-native`
+                  uri: `https://embed.connect.fastenhealth.com/?public-id=${CUSTOMER_PUBLIC_ID}&search-only=true&sdk-mode=react-native`
+                  // uri: `https://embed.connect-dev.fastenhealth.com/?public-id=${CUSTOMER_PUBLIC_ID}&search-only=true&sdk-mode=react-native`
               }}
               javaScriptEnabled={true}
               webviewDebuggingEnabled={true} //TODO: not required in production
@@ -288,11 +270,7 @@ export default function App() {
                       // we also need to make sure that we inject the script as early as possible, since we need to overwrite the window.opener.postMessage() function,
                       // which is the only thing that is called in a popup window.
 
-                      // OPTION 1
-                      // injectedJavaScriptBeforeContentLoaded={ commonOnNavigationStateChangeScript(CommunicationEntityModalWebView) }
-
-
-                        // OPTION 2
+                        // OPTION 1
                       onNavigationStateChange={
                             (navState) => {
                                 // Log the URL to see the navigation state
@@ -306,7 +284,7 @@ export default function App() {
                             }
                       }
 
-                      //OPTION 3
+                      //BROKEN: OPTION 2
                       // onLoadStart={e => {
                       //     // injectedModalScript[e.nativeEvent.url] = false
                       //     console.log(`[${CommunicationEntityModalWebView}] load start: ${e.nativeEvent.url}`);
