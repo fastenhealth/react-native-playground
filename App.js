@@ -222,7 +222,7 @@ export default function App() {
                   // uri: `https://www.acmelabsdemo.com/v3`
                   // uri: `https://www.acmelabsdemo.com/testing/popup`
                   // uri: `https://embed.connect.fastenhealth.com/?public-id=public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu&search-only=true`
-                  uri: `https://embed.connect-dev.fastenhealth.com/?public-id=public_test_rei2un7aagh5pquwikxh2dsyq23bsdyu4l8vm9eq29ftu&search-only=true`
+                  uri: `https://embed.connect-dev.fastenhealth.com/?public-id=public_test_rei2un7aagh5pquwikxh2dsyq23bsdyu4l8vm9eq29ftu&search-only=true&sdk-mode=react-native`
               }}
               javaScriptEnabled={true}
               webviewDebuggingEnabled={true} //TODO: not required in production
