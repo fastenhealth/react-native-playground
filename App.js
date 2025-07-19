@@ -107,7 +107,7 @@ export default function App() {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //Messaging Bus to facilitate communication between the two WebViews and the React Native app
     // - as discussed above, Reach Native uses `onMessage` and `postMessage` to communicate between the WebViews and the React Native app.
-    // - postMessage is overridden in `commonOnNavigationStateChangeScript` above for the Modal window
+    // - window.ReactNativeWebView.postMessage is called in Fasten Connect Callback API code directly.
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     const findWebviewRefByEntityName = (entityName: string): any => {
@@ -151,6 +151,13 @@ export default function App() {
             return
         }
 
+        //check if the event is intended for our customer to handle
+        if(communicationMessage.to === CommunicationEntityExternal) {
+            //TODO: add bubble up code outside this component.
+            console.log(`[${CommunicationEntityExternal}] received message for external entity, this will be bubbled up to customer for use outside this component`, communicationMessage);
+            return
+        }
+
         //check if the message is intended for a different WebView
         if (communicationMessage.to && communicationMessage.to !== currentWebviewEntity) {
             console.debug(`[${currentWebviewEntity}] message is not for this WebView, forwarding to ${communicationMessage.to}`);
@@ -178,9 +185,6 @@ export default function App() {
                 } else {
                     targetWebViewRef.postMessage(communicationMessage);
                 }
-
-
-
             } else {
                 console.error(`[${currentWebviewEntity}] could not find WebView reference for ${communicationMessage.to}`);
             }
