@@ -12,6 +12,7 @@ export default function App() {
     // const CUSTOMER_PUBLIC_ID = "public_test_rei2un7aagh5pquwikxh2dsyq23bsdyu4l8vm9eq29ftu";
     const CUSTOMER_PUBLIC_ID = "public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu";
 
+    const RECONNECT_ORG_CONNECTION_ID = "XXXXXX"
     /* *
     * This component is intended to replace the Fasten Connect Stitch.js widget in a React Native app.
     *
@@ -203,9 +204,11 @@ export default function App() {
               source={{
                   // uri: `https://www.acmelabsdemo.com/v3`
                   // uri: `https://www.acmelabsdemo.com/testing/popup`
-                  uri: `https://embed.connect.fastenhealth.com/?public-id=${CUSTOMER_PUBLIC_ID}&search-only=true&sdk-mode=react-native`
+                  // uri: `https://embed.connect.fastenhealth.com/?public-id=${CUSTOMER_PUBLIC_ID}&search-only=true&sdk-mode=react-native`
+                  uri: `https://embed.connect.fastenhealth.com/?public-id=${CUSTOMER_PUBLIC_ID}&reconnect-org-connection-id=${RECONNECT_ORG_CONNECTION_ID}&search-only=true&sdk-mode=react-native`
                   // uri: `https://embed.connect-dev.fastenhealth.com/?public-id=${CUSTOMER_PUBLIC_ID}&search-only=true&sdk-mode=react-native`
               }}
+              javaScriptCanOpenWindowsAutomatically={true}
               javaScriptEnabled={true}
               webviewDebuggingEnabled={true} //TODO: not required in production
               domStorageEnabled={true}
