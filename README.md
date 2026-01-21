@@ -27,7 +27,7 @@ Before setting up the project, ensure you have the following installed:
    ```
 
 3. **Configure the SDK**:
-    - Replace `CUSTOMER_PUBLIC_ID` in the `App.js` file with your actual public ID provided by Fasten Connect.
+    - Replace `CUSTOMER_PUBLIC_ID` in the `App.ts` file with your actual public ID provided by Fasten Connect.
 
 4. **Run the application**:
     ```
