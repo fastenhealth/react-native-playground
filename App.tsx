@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
-import FastenStitchElement from './src/components/FastenStitchElement';
+import FastenStitchElement from './FastenStitchElement';
 
 export default function App() {
   const CUSTOMER_PUBLIC_ID = "public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu";
