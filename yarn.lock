@@ -1045,6 +1045,13 @@
     find-up "^5.0.0"
     js-yaml "^4.1.0"
 
+"@fastenhealth/fasten-stitch-element-react-native@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.npmjs.org/@fastenhealth/fasten-stitch-element-react-native/-/fasten-stitch-element-react-native-1.0.0.tgz#888371e7e9b4c17be69ff955ef59089324f4064e"
+  integrity sha512-A6cBch5ov7E+QPDT6IzQm0FIqUVajc435GoccgSCyoxb0Etijvx7oHhvUZDUme3UVIzZGtRkv1n9cys8u8Pjsg==
+  dependencies:
+    react-native-base64 "^0.2.2"
+
 "@isaacs/cliui@^8.0.2":
   version "8.0.2"
   resolved "https://registry.npmjs.org/@isaacs/cliui/-/cliui-8.0.2.tgz#b37667b7bc181c168782259bab42474fbf52b550"
@@ -3765,10 +3772,10 @@ react-native-is-edge-to-edge@^1.1.6:
   resolved "https://registry.npmjs.org/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz#64e10851abd9d176cbf2b40562f751622bde3358"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
-react-native-webview@13.13.5:
-  version "13.13.5"
-  resolved "https://registry.npmjs.org/react-native-webview/-/react-native-webview-13.13.5.tgz#4ef5f9310ddff5747f884a6655228ec9c7d52c73"
-  integrity sha512-MfC2B+woL4Hlj2WCzcb1USySKk+SteXnUKmKktOk/H/AQy5+LuVdkPKm8SknJ0/RxaxhZ48WBoTRGaqgR137hw==
+react-native-webview@^13.16.0:
+  version "13.16.0"
+  resolved "https://registry.npmjs.org/react-native-webview/-/react-native-webview-13.16.0.tgz#c995148f944a7eaf12389f0e6d5c6f5e6a775686"
+  integrity sha512-Nh13xKZWW35C0dbOskD7OX01nQQavOzHbCw9XoZmar4eXCo7AvrYJ0jlUfRVVIJzqINxHlpECYLdmAdFsl9xDA==
   dependencies:
     escape-string-regexp "^4.0.0"
     invariant "2.2.4"
