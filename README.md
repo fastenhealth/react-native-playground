@@ -1,7 +1,7 @@
 
 # Fasten Connect React Native SDK (Beta)
 
-This project provides a React Native SDK for integrating Fasten Connect into your application. **Please note that this SDK is currently in beta and may not reflect the final version of the Fasten Connect React Native SDK.**
+This project uses the Fasten Stitch Element React Native SDK for integrating Fasten Connect into your application. **Please note that this SDK is currently in beta and may not reflect the final version.**
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ Before setting up the project, ensure you have the following installed:
    ```
 
 3. **Configure the SDK**:
-    - Replace `CUSTOMER_PUBLIC_ID` in the `App.js` file with your actual public ID provided by Fasten Connect.
+    - Replace `CUSTOMER_PUBLIC_ID` in the `App.ts` file with your actual public ID provided by Fasten Connect.
 
 4. **Run the application**:
     ```
@@ -43,8 +43,6 @@ Before setting up the project, ensure you have the following installed:
 
 - The SDK is in beta, and some features may not work as expected.
 - Documentation and API stability are subject to change in future releases.
-- Events from the SDK do not fully bubble up to the client application yet. 
-  - Modify the following [line](https://github.com/fastenhealth/react-native-playground/blob/main/App.js#L139) to implement your own custom logic 
 
 ## Feedback
 
