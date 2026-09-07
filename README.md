@@ -7,9 +7,9 @@ This project uses the Fasten Stitch Element React Native SDK for integrating Fas
 
 Before setting up the project, ensure you have the following installed:
 
-- **Node.js** (v14 or later)
-- **Yarn**
-- **React Native CLI**
+- **Node.js** (v20.19.4 or later; Node 22 LTS recommended)
+- **Yarn Classic** (1.22.22)
+- **Xcode 26.2 or later** for iOS
 - A working React Native environment (iOS/Android)
 
 ## Setup Instructions
@@ -36,8 +36,21 @@ Before setting up the project, ensure you have the following installed:
 
 ## Notes
 
+- This app pins Expo `55.0.31` with React Native `0.83.10` and React `19.2.0` to stay compatible with Xcode 26.3. Expo SDK 56 and 57 require Xcode 26.4 or later; see the [Expo compatibility table](https://docs.expo.dev/versions/latest/#support-for-android-and-ios-versions). Keep Expo packages aligned with SDK 55 using `npx expo install --check`.
+- SDK 55 does not use the separate `expo-modules-jsi` package. No JSI version override, dependency patch, or postinstall patch hook is needed.
 - This SDK uses `WebView` to embed Fasten Connect functionality. Ensure your app has the necessary permissions and configurations for `WebView` to work correctly.
 - Debugging is enabled by default in this beta version. Make sure to disable it in production by setting `webviewDebuggingEnabled` to `false`.
+
+## Rebuilding iOS after the SDK downgrade
+
+On your Mac, install the locked dependencies and regenerate the iOS project so SDK 57's CocoaPods references and build products are not reused:
+
+```bash
+yarn install --frozen-lockfile
+yarn ios:clean --no-build-cache
+```
+
+`ios:clean` replaces the generated `ios/` directory. Save any Mac-only native or signing customizations first and reapply them afterward. Normal subsequent builds can use `yarn ios`.
 
 ## Known Issues
 
