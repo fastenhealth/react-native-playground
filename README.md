@@ -9,7 +9,8 @@ Before setting up the project, ensure you have the following installed:
 
 - **Node.js** (v20.19.4 or later; Node 22 LTS recommended)
 - **Yarn Classic** (1.22.22)
-- **Xcode 26.2 or later** for iOS
+- **Java 17** for Android builds
+- **Xcode 26.4 or later** for iOS (Apple silicon Mac required)
 - A working React Native environment (iOS/Android)
 
 ## Setup Instructions
@@ -36,7 +37,7 @@ Before setting up the project, ensure you have the following installed:
 
 ## Notes
 
-- This app pins Expo `55.0.31` with React Native `0.83.10` and React `19.2.0` to stay compatible with Xcode 26.3. Expo SDK 56 and 57 require Xcode 26.4 or later; see the [Expo compatibility table](https://docs.expo.dev/versions/latest/#support-for-android-and-ios-versions). Keep Expo packages aligned with SDK 55 using `npx expo install --check`.
+- This app uses Expo SDK 57 with React Native `0.86.3` and React `19.2.3`. iOS builds require Xcode 26.4 or later, which is not available for Intel Macs; see the [Expo compatibility table](https://docs.expo.dev/versions/latest/#support-for-android-and-ios-versions). Keep Expo packages aligned with SDK 57 using `npx expo install --check`.
 - This SDK uses `WebView` to embed Fasten Connect functionality. Ensure your app has the necessary permissions and configurations for `WebView` to work correctly.
 - Debugging is enabled by default in this beta version. Make sure to disable it in production by setting `webviewDebuggingEnabled` to `false`.
 
