@@ -1,8 +1,10 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useColorScheme, View } from 'react-native';
 import {FastenStitchElement} from '@fastenhealth/fasten-stitch-element-react-native';
 
 export default function App() {
+  const colorScheme = useColorScheme();
+
   /* PROD */
   // const CUSTOMER_PUBLIC_ID = "public_test_6f5j7qj54rlyajv6u8r36z0iu5v9qjf87f77tzl3k6ezu";
   /* DEV LIVE */
@@ -21,6 +23,8 @@ export default function App() {
         debugModeEnabled
         onEventBus={handleEventBus}
         tefcaMode={true}
+        brandingAccentColor={"#32a852"}
+        brandingTheme={colorScheme ?? 'light'}
         // tefcaCspPromptForce={true}
         embedBaseUrl="https://embed.connect.fastenlabs.com"
       />
