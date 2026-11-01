@@ -1,5 +1,7 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { StyleSheet, useColorScheme } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {FastenStitchElement} from '@fastenhealth/fasten-stitch-element-react-native';
 
 export default function App() {
@@ -17,18 +19,23 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.root}>
-      <FastenStitchElement
-        publicId={CUSTOMER_PUBLIC_ID}
-        debugModeEnabled
-        onEventBus={handleEventBus}
-        tefcaMode={true}
-        brandingAccentColor={"#32a852"}
-        brandingTheme={colorScheme ?? 'light'}
-        // tefcaCspPromptForce={true}
-        embedBaseUrl="https://embed.connect.fastenlabs.com"
-      />
-    </View>
+    <SafeAreaProvider>
+      <StatusBar style="auto" />
+      <SafeAreaView
+        style={[styles.root, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' }]}
+      >
+        <FastenStitchElement
+          publicId={CUSTOMER_PUBLIC_ID}
+          debugModeEnabled
+          onEventBus={handleEventBus}
+          tefcaMode={true}
+          brandingAccentColor={"#32a852"}
+          brandingTheme={colorScheme ?? 'light'}
+          // tefcaCspPromptForce={true}
+          embedBaseUrl="https://embed.connect.fastenlabs.com"
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
